@@ -17,12 +17,12 @@ export FLYWAY_PLACEHOLDERS_DEMO_PASSWORD_HASH="${FLYWAY_PLACEHOLDERS_DEMO_PASSWO
 PROJECT="identity-db-check"
 DC="docker compose -p $PROJECT -f deploy/compose.yml"
 docker network inspect platform >/dev/null 2>&1 || docker network create platform >/dev/null
-cleanup() { $DC --profile migrate down -v --remove-orphans >/dev/null 2>&1 || true; }
+cleanup() { $DC --profile tooling down -v --remove-orphans >/dev/null 2>&1 || true; }
 trap cleanup EXIT
 cleanup
 
 fail() { echo "FAIL: $1" >&2; exit 1; }
-migrate() { $DC --profile migrate run --rm identity-db-migrate "$@"; }
+migrate() { $DC --profile tooling run --rm identity-db-migrate "$@"; }
 psql_db() { $DC exec -T identity-db psql -v ON_ERROR_STOP=1 -U "$IDENTITY_DB_USER" -d "$IDENTITY_DB_NAME" "$@"; }
 
 echo "== 1. migrate from an empty database"
