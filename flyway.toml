@@ -1,0 +1,18 @@
+# Flyway Community (ADR-007). The version number, not the folder, decides the order: one
+# sequence across DDL, DML, DCL and TCL (Annex A, "Con Flyway"). migrations/undo is not listed:
+# Flyway never runs the U scripts; scripts/rebuild-check.sh applies them with psql.
+# The history table lives inside the domain schema: nothing in public (Annex A rule 9).
+# The seed reads ${demo_password_hash} from FLYWAY_PLACEHOLDERS_DEMO_PASSWORD_HASH.
+[flyway]
+defaultSchema = "identity"
+locations = [
+  "filesystem:migrations/01_ddl",
+  "filesystem:migrations/02_dml",
+  "filesystem:migrations/03_dcl",
+  "filesystem:migrations/04_tcl",
+]
+validateMigrationNaming = true
+cleanDisabled = true
+
+[flyway.postgresql.transactional]
+lock = false
