@@ -1,0 +1,22 @@
+name: db-ci
+on:
+  pull_request:
+    branches: [develop, qa, main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Every V has its U, no file outside the families
+        run: |
+          set -e
+          for f in $(find migrations -path migrations/undo -prune -o -name 'V*__*.sql' -print); do
+            v=$(basename "$f" | sed -E 's/^V([0-9]+)__.*/\1/')
+            find migrations/undo -name "U${v}__*.sql" | grep -q . || { echo "missing U${v} for $f"; exit 1; }
+          done
+      - name: Rebuild from zero, apply again, undo everything, rebuild, validate, seed twice (Annex A)
+        run: sh scripts/rebuild-check.sh
