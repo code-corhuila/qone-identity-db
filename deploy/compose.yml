@@ -1,7 +1,8 @@
 # The identity database as qone-infra composes it (Annex G): its own PostgreSQL instance with
 # a fixed image version, a volume and a health check, plus the Flyway runner behind a profile:
 #   docker compose --env-file .env run --rm identity-db-migrate
-# Credentials and the demo password hash come from the .env of qone-infra; nothing is written here.
+# Credentials come from the .env of qone-infra; the demo password hash is exported by its
+# scripts before the runner starts (Flyway refuses to migrate the seed without the placeholder).
 services:
   identity-db:
     image: postgres:16.4-alpine
@@ -26,7 +27,7 @@ services:
   identity-db-migrate:
     image: flyway/flyway:10.22.0
     container_name: identity-db-migrate
-    profiles: ["migrate"]
+    profiles: ["tooling"]
     depends_on:
       identity-db:
         condition: service_healthy
@@ -34,7 +35,7 @@ services:
       FLYWAY_URL: jdbc:postgresql://identity-db:5432/${IDENTITY_DB_NAME:-identity}
       FLYWAY_USER: ${IDENTITY_DB_USER:-identity}
       FLYWAY_PASSWORD: ${IDENTITY_DB_PASSWORD:?IDENTITY_DB_PASSWORD is required}
-      FLYWAY_PLACEHOLDERS_DEMO_PASSWORD_HASH: ${FLYWAY_PLACEHOLDERS_DEMO_PASSWORD_HASH:?FLYWAY_PLACEHOLDERS_DEMO_PASSWORD_HASH is required (scripts/hash-password.py)}
+      FLYWAY_PLACEHOLDERS_DEMO_PASSWORD_HASH: ${FLYWAY_PLACEHOLDERS_DEMO_PASSWORD_HASH:-}
     volumes:
       - ../migrations:/workspace/migrations:ro
       - ../flyway.toml:/workspace/flyway.toml:ro

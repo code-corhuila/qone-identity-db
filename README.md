@@ -63,7 +63,7 @@ scripts/      rebuild-check.sh (what db-ci runs), hash-password.py
 cp .env.example .env            # set IDENTITY_DB_PASSWORD and the placeholder; .env is ignored by git
 docker network create platform  # once; qone-infra creates it in the full platform
 docker compose --env-file .env -f deploy/compose.yml up -d identity-db
-docker compose --env-file .env -f deploy/compose.yml --profile migrate run --rm identity-db-migrate
+docker compose --env-file .env -f deploy/compose.yml --profile tooling run --rm identity-db-migrate
 sh scripts/rebuild-check.sh     # the Annex A check db-ci runs on every pull request
 ```
 
