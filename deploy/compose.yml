@@ -1,0 +1,54 @@
+# The identity database as qone-infra composes it (Annex G): its own PostgreSQL instance with
+# a fixed image version, a volume and a health check, plus the Flyway runner behind a profile:
+#   docker compose --env-file .env run --rm identity-db-migrate
+# Credentials come from the .env of qone-infra; the demo password hash is exported by its
+# scripts before the runner starts (Flyway refuses to migrate the seed without the placeholder).
+services:
+  identity-db:
+    image: postgres:16.4-alpine
+    container_name: identity-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${IDENTITY_DB_NAME:-identity}
+      POSTGRES_USER: ${IDENTITY_DB_USER:-identity}
+      POSTGRES_PASSWORD: ${IDENTITY_DB_PASSWORD:?IDENTITY_DB_PASSWORD is required}
+    expose:
+      - "5432"
+    volumes:
+      - identity-db-data:/var/lib/postgresql/data
+    networks:
+      - platform
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${IDENTITY_DB_USER:-identity} -d ${IDENTITY_DB_NAME:-identity}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  identity-db-migrate:
+    image: flyway/flyway:10.22.0
+    container_name: identity-db-migrate
+    profiles: ["tooling"]
+    depends_on:
+      identity-db:
+        condition: service_healthy
+    environment:
+      FLYWAY_URL: jdbc:postgresql://identity-db:5432/${IDENTITY_DB_NAME:-identity}
+      FLYWAY_USER: ${IDENTITY_DB_USER:-identity}
+      FLYWAY_PASSWORD: ${IDENTITY_DB_PASSWORD:?IDENTITY_DB_PASSWORD is required}
+      FLYWAY_PLACEHOLDERS_DEMO_PASSWORD_HASH: ${FLYWAY_PLACEHOLDERS_DEMO_PASSWORD_HASH:-}
+    volumes:
+      - ../migrations:/workspace/migrations:ro
+      - ../flyway.toml:/workspace/flyway.toml:ro
+    # The entrypoint fixes where the config lives; the command is the default action, and any
+    # other action replaces it: `run --rm identity-db-migrate info`.
+    entrypoint: ["flyway", "-workingDirectory=/workspace", "-configFiles=/workspace/flyway.toml"]
+    command: ["migrate"]
+    networks:
+      - platform
+
+volumes:
+  identity-db-data:
+
+networks:
+  platform:
+    external: true
