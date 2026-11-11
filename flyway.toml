@@ -2,7 +2,12 @@
 # sequence across DDL, DML, DCL and TCL (Annex A, "Con Flyway"). migrations/undo is not listed:
 # Flyway never runs the U scripts; scripts/rebuild-check.sh applies them with psql.
 # The history table lives inside the domain schema: nothing in public (Annex A rule 9).
-# The seed reads ${demo_password_hash} from FLYWAY_PLACEHOLDERS_DEMO_PASSWORD_HASH.
+# migrations/04_demo (V007, the demo people) is NOT listed here: it is a develop-only location.
+# In develop, qone-infra's scripts/migrate.sh passes the runner -locations=<the list below>,
+# filesystem:migrations/04_demo (its IDENTITY_DEMO_LOCATION); keep one location per line, as it
+# reads this list line by line. qa and main never add it: their databases hold no demo people,
+# and the ADMIN comes from the bootstrap of qone-identity-api.
+# The demo seed reads ${demo_password_hash} from FLYWAY_PLACEHOLDERS_DEMO_PASSWORD_HASH.
 [flyway]
 defaultSchema = "identity"
 locations = [
