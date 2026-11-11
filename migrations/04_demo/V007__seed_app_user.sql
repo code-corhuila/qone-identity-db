@@ -1,7 +1,7 @@
 -- The eight demo people of develop (06-data, ADR-009): synthetic identities on the reserved
--- .test TLD (RFC 2606), with the ids the portals' fixtures use. Applied only in develop: 05_demo
--- is a Flyway location only when IDENTITY_DB_DEMO_SEED is set (flyway.develop.toml). The ADMIN is
--- not seeded: qone-identity-api creates it on start from BOOTSTRAP_ADMIN_EMAIL/PASSWORD.
+-- .test TLD (RFC 2606), with the ids the portals' fixtures use. Applied only in develop: 04_demo
+-- is not in flyway.toml; qone-infra adds it to the runner's -locations when APP_ENV=develop. The
+-- ADMIN is not seeded: qone-identity-api creates it on start from BOOTSTRAP_ADMIN_EMAIL/PASSWORD.
 -- The password hash is NOT written here: Flyway replaces ${demo_password_hash} with the value of
 -- FLYWAY_PLACEHOLDERS_DEMO_PASSWORD_HASH, computed from the DEMO_PASSWORD of qone-infra/.env with
 -- scripts/hash-password.py (migration-strategy.md rule 5). Upsert on the id (Annex A rule 11).
