@@ -23,7 +23,7 @@ Specification: `06-data/models.md` (schema `identity`), `06-data/modeling-conven
 |---|---|---|
 | `app_user` | the people: e-mail, name, PBKDF2 password hash, role, student fields | e-mail unique and lower-case; role in `STUDENT`, `PROFESSOR`, `ADMIN` (`SERVICE` exists only in tokens); a student has a code and nobody else does; code digits 6 to 20, unique |
 | `service_token` | the metadata of the tokens issued to `qone-workflow`, `qone-worker`, `qone-advisor-api` | the JWT itself is returned once; only its SHA-256 is kept, unique |
-| `idempotency_key` | the `Idempotency-Key` of every registration and service token (norm 5.3.8) | key of 8 to 128 characters |
+| `idempotency_key` | the `Idempotency-Key` of every registration and service token (norm 5.3.8), its owner and the SHA-256 of the request that used it | key of 8 to 128 characters, unique **per owner** (`owner_id`: the token subject, `anonymous` for the public registration; `code-corhuila/qone-docs#55`); `request_hash` is 64 hex characters |
 
 Roles `identity_reader` and `identity_writer` are `NOLOGIN`; `qone-infra` creates the login
 users from secrets.
@@ -47,11 +47,11 @@ export FLYWAY_PLACEHOLDERS_DEMO_PASSWORD_HASH=$(python scripts/hash-password.py 
 
 ```
 migrations/
-├── 01_ddl/   00_extensions · 01_schemas · 02_tables · 04_alter · 05_indexes   (V001..V006)
+├── 01_ddl/   00_extensions · 01_schemas · 02_tables · 04_alter · 05_indexes   (V001..V006, V010)
 ├── 02_dml/   seed as upserts with the password placeholder                    (V007)
 ├── 03_dcl/   roles and grants                                                 (V008, V009)
 ├── 04_tcl/   recorded one-off recoveries, never automatic
-└── undo/     U001..U009, one per V, same relative path
+└── undo/     U001..U010, one per V, same relative path
 flyway.toml   the locations, in order; undo/ is not one of them
 deploy/       the instance and the Flyway runner that qone-infra includes
 scripts/      rebuild-check.sh (what db-ci runs), hash-password.py
