@@ -3,6 +3,8 @@
 #   docker compose --env-file .env run --rm identity-db-migrate
 # Credentials come from the .env of qone-infra; the demo password hash is exported by its
 # scripts before the runner starts (Flyway refuses to migrate the seed without the placeholder).
+# The demo people (migrations/05_demo) are applied only when IDENTITY_DB_DEMO_SEED is non-empty:
+# qone-infra sets it to true in develop only; then flyway.develop.toml is loaded after flyway.toml.
 services:
   identity-db:
     image: postgres:16.4-alpine
@@ -39,9 +41,10 @@ services:
     volumes:
       - ../migrations:/workspace/migrations:ro
       - ../flyway.toml:/workspace/flyway.toml:ro
+      - ../flyway.develop.toml:/workspace/flyway.develop.toml:ro
     # The entrypoint fixes where the config lives; the command is the default action, and any
     # other action replaces it: `run --rm identity-db-migrate info`.
-    entrypoint: ["flyway", "-workingDirectory=/workspace", "-configFiles=/workspace/flyway.toml"]
+    entrypoint: ["flyway", "-workingDirectory=/workspace", "-configFiles=/workspace/flyway.toml${IDENTITY_DB_DEMO_SEED:+,/workspace/flyway.develop.toml}"]
     command: ["migrate"]
     networks:
       - platform

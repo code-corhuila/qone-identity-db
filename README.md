@@ -28,39 +28,64 @@ Specification: `06-data/models.md` (schema `identity`), `06-data/modeling-conven
 Roles `identity_reader` and `identity_writer` are `NOLOGIN`; `qone-infra` creates the login
 users from secrets.
 
-## Seed and the demo password
+## Demo people: develop only
 
-`02_dml/V007__seed_app_user.sql` inserts the nine people of the demo with the ids the portals'
-fixtures use. **No password hash is written in the repository**: the seed carries the Flyway
-placeholder `${demo_password_hash}`, replaced at migration time with
-`FLYWAY_PLACEHOLDERS_DEMO_PASSWORD_HASH`, which `qone-infra` computes from the demo password of
-its `.env`:
+`05_demo/V007__seed_app_user.sql` inserts the **eight** demo people with the ids the portals'
+fixtures use, all synthetic (`code-corhuila/qone-docs#55`): `Estudiante Demo 01`..`05`
+(`estudiante.01@qampus.test`.., codes `2099000001`..`2099000005`) and `Profesor Demo 01`..`03`
+(`profesor.01@qampus.test`..), on the reserved `.test` TLD (RFC 2606). **There is no ADMIN row**:
+`qone-identity-api` creates the ADMIN (`33333333-3333-4333-8333-333333333331`) on start from
+`BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD`, and never overwrites an existing one.
+
+**The demo people exist only in develop.** `migrations/05_demo` is not a location of
+`flyway.toml`; it is added by `flyway.develop.toml`, which the runner loads after `flyway.toml`
+only when `IDENTITY_DB_DEMO_SEED` is non-empty (`deploy/compose.yml`). `qone-infra` sets
+`IDENTITY_DB_DEMO_SEED=true` in develop and leaves it empty in qa and main, whose databases
+hold no demo people. `scripts/rebuild-check.sh` proves both paths (step 8 migrates without it).
+
+| Environment | `IDENTITY_DB_DEMO_SEED` | Flyway config files | People after migrate |
+|---|---|---|---|
+| develop | `true` | `flyway.toml`, `flyway.develop.toml` | the 8 demo people (+ the ADMIN of the bootstrap) |
+| qa, main | empty | `flyway.toml` | none (only the ADMIN of the bootstrap) |
+
+**No password hash is written in the repository**: the seed carries the Flyway placeholder
+`${demo_password_hash}`, replaced at migration time with `FLYWAY_PLACEHOLDERS_DEMO_PASSWORD_HASH`,
+which `qone-infra` computes from the `DEMO_PASSWORD` of `qone-infra/.env`:
 
 ```bash
 export FLYWAY_PLACEHOLDERS_DEMO_PASSWORD_HASH=$(python scripts/hash-password.py "$DEMO_PASSWORD")
 ```
 
 `scripts/hash-password.py` is the standard-library PBKDF2-HMAC-SHA256 (200,000 iterations,
-16-byte salt, `salt$hex`) that `qone-identity-api` verifies.
+16-byte salt, `salt$hex`) that `qone-identity-api` verifies. `scripts/check-seed-identities.sh`
+(db-ci, and step 0 of the rebuild check) fails on any e-mail outside `.test` or any
+password-hash literal in a migration.
+
+The move and the renaming changed V007 in place, a decided exception to "a merged version is
+immutable": its Flyway checksum changed, so a machine that already applied it runs
+`sh scripts/down.sh --volumes` once in `qone-infra` (every environment is local) and brings the
+platform up again.
 
 ## Layout
 
 ```
 migrations/
 ├── 01_ddl/   00_extensions · 01_schemas · 02_tables · 04_alter · 05_indexes   (V001..V006, V010)
-├── 02_dml/   seed as upserts with the password placeholder                    (V007)
+├── 02_dml/   data patches as upserts (empty: the only seed is the demo, below)
 ├── 03_dcl/   roles and grants                                                 (V008, V009)
 ├── 04_tcl/   recorded one-off recoveries, never automatic
+├── 05_demo/  develop only: the demo people, password placeholder              (V007)
 └── undo/     U001..U010, one per V, same relative path
-flyway.toml   the locations, in order; undo/ is not one of them
+flyway.toml   the locations, in order; neither undo/ nor 05_demo/ is one of them
+flyway.develop.toml  develop only: the same locations plus 05_demo/
 deploy/       the instance and the Flyway runner that qone-infra includes
-scripts/      rebuild-check.sh (what db-ci runs), hash-password.py
+scripts/      rebuild-check.sh (what db-ci runs), check-seed-identities.sh, hash-password.py
 ```
 
 ## How to run it
 
 ```bash
-cp .env.example .env            # set IDENTITY_DB_PASSWORD and the placeholder; .env is ignored by git
+cp .env.example .env            # set IDENTITY_DB_PASSWORD (and, for develop, IDENTITY_DB_DEMO_SEED=true and the placeholder); .env is ignored by git
 docker network create platform  # once; qone-infra creates it in the full platform
 docker compose --env-file .env -f deploy/compose.yml up -d identity-db
 docker compose --env-file .env -f deploy/compose.yml --profile tooling run --rm identity-db-migrate
