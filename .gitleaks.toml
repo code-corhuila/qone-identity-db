@@ -1,0 +1,12 @@
+# gitleaks configuration (HU-PLT-005, code-corhuila/qone-docs#55). db-ci runs, over the whole history:
+#   docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.21.2 detect --source /repo --config /repo/.gitleaks.toml --redact --verbose
+# The default rules stay on; this file only adds what they miss. No allowlist: a database repository
+# versions no secret and no test literal that looks like one.
+[extend]
+useDefault = true
+
+[[rules]]
+id = "openai-api-key"
+description = "OpenAI API key (project, service account, admin or legacy user key)"
+regex = '''sk-(proj-|svcacct-|admin-)?[A-Za-z0-9_-]{20,}'''
+keywords = ["sk-"]
